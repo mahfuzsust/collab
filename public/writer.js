@@ -14,7 +14,6 @@ window.onload = function () {
     let syncValue = Array();
     let keypressed = false;
 
-
     function addEditor(writer) {
         var ul = document.getElementById("editors");
         var li = document.createElement("li");
@@ -38,6 +37,10 @@ window.onload = function () {
                 let output = Array.from(currentData);
                 let localChanges = getChanges(input, output);
 
+                socket.emit('content_change', {
+                    documentId: documentId,
+                    changes: localChanges
+                });
                 applyChanges(input, localChanges);
             }
             let ranges = editor.getSelection().getRanges();
