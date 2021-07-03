@@ -10,7 +10,13 @@ const { createClient } = require('redis');
 const redisAdapter = require('@socket.io/redis-adapter');
 const expirationSeconds = 12 * 60 * 60;
 
-const pubClient = createClient({ host: process.env.REDIS_ENDPOINT || 'localhost', port: 6379 });
+const pubClient = createClient({
+    host: process.env.REDIS_ENDPOINT || 'localhost',
+    port: process.env.REDIS_PORT || 6379
+});
+if (process.env.REDIS_PASSWORD) {
+    pubClient.auth(process.env.REDIS_PASSWORD);
+}
 const subClient = pubClient.duplicate();
 io.adapter(redisAdapter(pubClient, subClient));
 
