@@ -7,8 +7,6 @@ window.onload = function () {
     const handle = document.getElementById('handle');
     const register = document.getElementById('register');
 
-    const textarea = document.getElementById('textarea');
-
     const editor = CKEDITOR.instances.textarea;
 
     let syncValue = Array();
@@ -27,28 +25,35 @@ window.onload = function () {
         var elem = document.getElementById(id);
         return elem.parentNode.removeChild(elem);
     }
+    function applyLocalChanges() {
+        if (keypressed && editor.checkDirty()) {
+            let currentData = editor.getData();
+            let input = Array.from(syncValue);
+            let output = Array.from(currentData);
+            let changes = getChanges(input, output);
+            applyChanges(input, changes);
+            if (output.join('') == input.join('')) {
+                socket.emit('content_change', {
+                    documentId: documentId,
+                    changes: changes
+                });
+                editor.resetDirty();
+                syncValue = input;
+            }
+            keypressed = false;
+        }
+    }
     function setSocketEvents() {
         socket.on('content_change', (incomingChanges) => {
             let input = Array.from(syncValue);
             applyChanges(input, incomingChanges);
+            syncValue = input;
+            applyLocalChanges();
 
-            if (keypressed && editor.checkDirty()) {
-                let currentData = editor.getData();
-                let output = Array.from(currentData);
-                let localChanges = getChanges(input, output);
-
-                socket.emit('content_change', {
-                    documentId: documentId,
-                    changes: localChanges
-                });
-                applyChanges(input, localChanges);
-            }
             let ranges = editor.getSelection().getRanges();
-            keypressed = false;
-            editor.setData(input.join(''));
+            editor.setData(syncValue.join(''));
             editor.getSelection().selectRanges(ranges);
             editor.resetDirty();
-            syncValue = input;
         });
         socket.on('register', (data) => {
             addEditor(data);
@@ -72,7 +77,6 @@ window.onload = function () {
         const editorBlock = document.getElementById('editor-block');
         editorBlock.style.display = 'block';
         syncValue = "";
-        textarea.value = syncValue;
         socket = io();
         socket.emit('register', {
             handle: handle.value,
@@ -95,30 +99,11 @@ window.onload = function () {
         });
     }
 
-    function syncData() {
-        if (keypressed && editor.checkDirty()) {
-            const currentData = editor.getData();
-            let input = Array.from(syncValue);
-            let output = Array.from(currentData);
-            let changes = getChanges(input, output);
-            applyChanges(input, changes);
-            if (output.join('') == input.join('')) {
-                socket.emit('content_change', {
-                    documentId: documentId,
-                    changes: changes
-                });
-                editor.resetDirty();
-                syncValue = input;
-            }
-            keypressed = false;
-        }
-    }
-
     var timeout = setTimeout(null, 0);
     editor.on('key', () => {
         clearTimeout(timeout);
         keypressed = true;
-        timeout = setTimeout(syncData, 1000);
+        timeout = setTimeout(applyLocalChanges, 1000);
     });
 
     register.addEventListener('click', registerUserListener);
