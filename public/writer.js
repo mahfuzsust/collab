@@ -1,8 +1,7 @@
 "use strict"
 window.onload = function () {
     let socket;
-    const url = new URL(window.location.href);
-    const documentId = url.pathname.substring(1) || 'abcd';
+    const documentId = new URL(window.location.href).pathname.split('/')[1] || 'test';
 
     const handle = document.getElementById('handle');
     const register = document.getElementById('register');
